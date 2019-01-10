@@ -15,8 +15,8 @@ class EcbFxClient {
   EcbFxClient(Client client) : _client = client;
 
   Future<EcbFxRates> getCurrent() async {
-    final Response response = await _client.send(new Request(
-        'GET', 'http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'));
+    final Response response = await _client.send(new Request('GET',
+        'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'));
     if (response.statusCode != 200) {
       throw new Exception(
           'Request failed with status code: ${response.statusCode}');
@@ -32,7 +32,23 @@ class EcbFxClient {
 
   Future<List<EcbFxRates>> getLast90Days() async {
     final Response response = await _client.send(new Request('GET',
-        'http://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml'));
+        'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml'));
+    if (response.statusCode != 200) {
+      throw new Exception(
+          'Request failed with status code: ${response.statusCode}');
+    }
+    final String xmlText = await response.readAsString();
+    final XmlDocument doc = parse(xmlText);
+    return doc
+        .findAllElements('Cube')
+        .where((elem) => elem.getAttribute('time') != null)
+        .map((XmlElement elem) => new EcbFxRates._fromXml(elem))
+        .toList();
+  }
+
+  Future<List<EcbFxRates>> getHistorical() async {
+    final Response response = await _client.send(new Request(
+        'GET', 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.xml'));
     if (response.statusCode != 200) {
       throw new Exception(
           'Request failed with status code: ${response.statusCode}');
@@ -49,9 +65,9 @@ class EcbFxClient {
 
 class EcbFxRates {
   final String date;
-  final Map<String, Decimal> _rates;
+  final Map<String, Decimal> rates;
 
-  EcbFxRates._(this.date, this._rates);
+  EcbFxRates._(this.date, this.rates);
 
   factory EcbFxRates._fromXml(XmlElement node) {
     final Map<String, Decimal> rates = {};
@@ -69,7 +85,10 @@ class EcbFxRates {
     return new EcbFxRates._(node.getAttribute('time'), rates);
   }
 
-  Decimal getDecimal(String currency) => _rates[currency];
+  Decimal getDecimal(String currency) => rates[currency];
 
   double getDouble(String currency) => getDecimal(currency)?.toDouble();
+
+  Map<String, double> toDoubleMap() =>
+      rates.map((k, v) => new MapEntry<String, double>(k, v?.toDouble()));
 }
