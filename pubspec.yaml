@@ -1,5 +1,5 @@
 name: ecb_fx
-description: Foreign Exchange (FX) rates from the European Central Bank.
+description: Current, 90-day and historical Foreign Exchange (FX) rates from the European Central Bank.
 version: 0.1.1
 
 author: Istvan Soos <istvan.soos@agilord.com>
